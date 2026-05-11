@@ -56,15 +56,15 @@ class ShopperIntentionModel:
                     ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), self.categorical_features)
                 ])
 
-            # Use 200 trees for better ensemble stabilization
+            # Use fewer trees to prevent main thread blocking in Pyodide
             self.pipeline = Pipeline(steps=[
                 ('preprocessor', preprocessor),
                 ('classifier', RandomForestClassifier(
-                    n_estimators=200, 
-                    max_depth=12,
+                    n_estimators=30, 
+                    max_depth=8,
                     min_samples_split=5,
                     min_samples_leaf=2,
-                    class_weight='balanced_subsample', # Better for random forest with imbalance
+                    class_weight='balanced', # Faster than balanced_subsample
                     random_state=42,
                     n_jobs=1
                 ))
