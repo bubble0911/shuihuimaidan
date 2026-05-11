@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "language": { "type": "string", "enum": ["en", "zh"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Prediction": {
+      "title": "Prediction",
+      "description": "Shopper intention prediction record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "features": {
+          "type": "object",
+          "properties": {
+            "is_returning_customer": { "type": "boolean" },
+            "basket_size": { "type": "integer" },
+            "time_on_site": { "type": "integer" },
+            "viewed_promo": { "type": "boolean" },
+            "is_weekend": { "type": "boolean" }
+          }
+        },
+        "prediction": { "type": "boolean" },
+        "probability": { "type": "number" },
+        "model_version": { "type": "string" }
+      },
+      "required": ["userId", "timestamp", "features", "prediction"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "predictions/{predictionId}": {
+      "schema": "Prediction",
+      "description": "History of predictions"
+    }
+  }
+}

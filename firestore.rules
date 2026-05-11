@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- User Rules ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 256 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+             (!('language' in data) || (data.language in ['en', 'zh'])) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp));
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && 
+                      isValidUser(incoming()) && 
+                      incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'language']);
+    }
+
+    // --- Prediction Rules ---
+    function isValidPrediction(data) {
+      return data.keys().hasAll(['userId', 'timestamp', 'features', 'prediction', 'probability']) &&
+             data.userId == request.auth.uid &&
+             data.timestamp == request.time &&
+             data.prediction is bool &&
+             data.probability is number &&
+             data.features is map &&
+             data.features.keys().hasAll(['is_returning_customer', 'basket_size', 'time_on_site', 'viewed_promo', 'is_weekend']);
+    }
+
+    match /predictions/{predictionId} {
+      // Users can list their own predictions
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Creation restricted to authenticated users
+      allow create: if isSignedIn() && 
+                      isValidPrediction(incoming()) && 
+                      isValidId(predictionId);
+      
+      // Predictions are immutable once created
+      allow update, delete: if false;
+    }
+  }
+}
