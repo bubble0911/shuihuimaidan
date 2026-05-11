@@ -157,7 +157,9 @@ class ShopperIntentionModel:
             print(f"Python Predict: Prob={prob_buy:.4f}, Outcome={result}")
             return bool(result), prob_buy
         except Exception as e:
-            print(f"Python: Predict Error: {e}")
-            return False, 0.0
+            import traceback
+            err_msg = f"Data processing failed: {str(e)}\n{traceback.format_exc()}"
+            print(f"Python: {err_msg}")
+            raise Exception(err_msg)
 
 predictor = ShopperIntentionModel()
