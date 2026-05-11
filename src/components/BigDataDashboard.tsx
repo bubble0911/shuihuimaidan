@@ -52,7 +52,7 @@ export default function BigDataDashboard({ data, onClose }: DashboardProps) {
         />
         <StatCard 
           label="Global Convert Rate" 
-          value={`${((data.total_revenue_events/data.total_samples) * 100).toFixed(2)}%`} 
+          value={data.total_samples > 0 ? `${((data.total_revenue_events/data.total_samples) * 100).toFixed(2)}%` : '0.00%'} 
           icon={<Users className="w-4 h-4" />} 
           sub="Aggregated Performance"
         />
