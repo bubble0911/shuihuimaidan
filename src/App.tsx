@@ -584,7 +584,7 @@ function InputGroup({ label, value, onChange, icon, placeholder }: { label: stri
       <input 
         type="number" 
         step="any"
-        value={value} 
+        value={Number.isNaN(value) ? '' : value} 
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className="bg-transparent font-mono text-2xl w-full outline-none focus:text-zinc-500 transition-colors tracking-tighter p-0 m-0 leading-none"
