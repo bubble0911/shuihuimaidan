@@ -88,11 +88,11 @@ export default function Dashboard({ onClose }: { onClose: () => void }) {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-50 bg-[#E4E3E0] flex flex-col p-4 md:p-8 overflow-hidden font-sans"
+      className="fixed inset-0 z-50 bg-[#E4E3E0] flex flex-col font-sans overflow-y-auto md:overflow-hidden"
     >
-      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col border border-[#141414] bg-white shadow-2xl relative">
+      <div className="max-w-7xl mx-auto w-full md:flex-1 flex flex-col border-[#141414] bg-white shadow-2xl relative min-h-screen md:min-h-0 md:m-8">
         {/* Header */}
-        <header className="flex justify-between items-center p-6 border-bottom border-[#141414] bg-white border-b">
+        <header className="flex justify-between items-center p-6 border-b border-[#141414] bg-white sticky top-0 z-20">
           <div className="flex items-center gap-4">
             <Database className="w-6 h-6" />
             <h2 className="text-2xl font-serif italic tracking-tight font-bold">{t('dashboard')}</h2>
@@ -178,10 +178,10 @@ export default function Dashboard({ onClose }: { onClose: () => void }) {
                          </td>
                          <td className="p-4">
                            <span className={cn(
-                             "text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest",
-                             record.prediction ? "bg-green-100 text-green-700 group-hover:bg-green-900 group-hover:text-green-100" : "bg-red-100 text-red-700 group-hover:bg-red-900 group-hover:text-red-100"
+                             "text-[10px] font-bold px-2 py-0.5 rounded-sm tracking-widest",
+                             record.probability >= 0.6 ? "bg-green-100 text-green-700 group-hover:bg-green-900 group-hover:text-green-100" : (record.probability >= 0.3 ? "bg-yellow-100 text-yellow-700 group-hover:bg-yellow-900 group-hover:text-yellow-100" : "bg-red-100 text-red-700 group-hover:bg-red-900 group-hover:text-red-100")
                            )}>
-                             {record.prediction ? 'YES' : 'NO'}
+                             {record.probability >= 0.6 ? 'yes！' : (record.probability >= 0.3 ? 'possible？' : 'no×')}
                            </span>
                          </td>
                          <td className="p-4 font-mono text-[11px]">

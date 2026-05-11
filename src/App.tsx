@@ -89,33 +89,32 @@ export default function App() {
         try {
           setLoadingStep(t('loading_python'));
           // @ts-ignore
-          const py = await window.loadPyodide();
+          const py = await window.loadPyodide({
+            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
+          });
           
           setLoadingStep(t('loading_packages'));
           // Load sequentially with explicit dependency order
-          console.log("Loading numpy...");
-          await py.loadPackage("numpy");
-          console.log("Loading scipy...");
-          await py.loadPackage("scipy");
-          console.log("Loading pandas...");
-          await py.loadPackage("pandas");
-          console.log("Loading scikit-learn...");
-          await py.loadPackage("scikit-learn");
+          console.log("Loading base packages...");
+          // Loading them in a single call often helps with dependency resolution and download timing
+          await py.loadPackage(["numpy", "scipy", "pandas", "scikit-learn"]);
           
           setLoadingStep(t('app_title')); // Signal config
           const response = await fetch('/predictor.py');
-          if (!response.ok) throw new Error('Failed to fetch predictor.py');
+          if (!response.ok) throw new Error(`Failed to fetch predictor.py: ${response.statusText}`);
           const code = await response.text();
           py.runPython(code);
 
           setLoadingStep(t('dataset_insights'));
           const csvResponse = await fetch('/data.csv');
-          if (!csvResponse.ok) throw new Error('Failed to fetch data.csv');
+          if (!csvResponse.ok) throw new Error(`Failed to fetch data.csv: ${csvResponse.statusText}`);
           const csvData = await csvResponse.text();
 
           setLoadingStep(t('training_model'));
           // Run training
           const predictor = py.globals.get('predictor');
+          if (!predictor) throw new Error("Python 'predictor' object not found after running script.");
+          
           const score = predictor.train(csvData);
           setAccuracy(score);
 
@@ -127,14 +126,20 @@ export default function App() {
           setIsReady(true);
           return; // Success!
         } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
           console.error(`Init attempt ${retryCount + 1} failed:`, err);
+          
+          if (errorMessage.includes('Failed to fetch')) {
+             console.warn("Fetch error detected - possibly CDN or network instability.");
+          }
+
           retryCount++;
           if (retryCount <= MAX_RETRIES) {
-            setLoadingStep(`Retry ${retryCount}/${MAX_RETRIES}...`);
+            setLoadingStep(`Retry ${retryCount}/${MAX_RETRIES}: ${errorMessage.substring(0, 30)}...`);
             await new Promise(r => setTimeout(r, 2000));
           } else {
-            setLoadingStep('Error initializing model. Network issue detected.');
-            console.error('Final failure:', err);
+            setLoadingStep(`Error: ${errorMessage}. Please check connection.`);
+            console.error('Final failure after retries:', err);
           }
         }
       }
@@ -243,7 +248,7 @@ export default function App() {
   }
 
   return (
-    <div className="bg-[#F5F2ED] text-[#1A1A1A] min-h-screen flex flex-col font-sans p-2 md:p-12 selection:bg-black selection:text-white">
+    <div className="bg-[#F5F2ED] text-[#1A1A1A] min-h-screen flex flex-col font-sans selection:bg-black selection:text-white">
       <Navigation onDashboardOpen={() => setIsDashboardOpen(true)} />
       
       <AnimatePresence>
@@ -258,7 +263,8 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <div className="border-[6px] md:border-[12px] border-[#1A1A1A] p-4 md:p-10 flex-1 flex flex-col bg-white shadow-2xl overflow-x-hidden mt-16">
+      <div className="flex-1 flex flex-col p-2 md:p-12">
+        <div className="border-[6px] md:border-[12px] border-[#1A1A1A] p-4 md:p-10 flex-1 flex flex-col bg-white shadow-2xl mt-16 max-w-[1700px] mx-auto w-full">
         
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b-2 border-black pb-8 mb-12 gap-6">
           <div className="md:w-2/3">
@@ -280,8 +286,8 @@ export default function App() {
           </div>
         </header>
 
-        <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-12">
-          <div className="lg:col-span-4 flex flex-col gap-10 border-b lg:border-b-0 lg:border-r border-gray-100 pb-12 lg:pb-0 lg:pr-12">
+        <main className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-12">
+          <div className="xl:col-span-3 flex flex-col gap-10 border-b xl:border-b-0 xl:border-r border-gray-100 pb-12 xl:pb-0 xl:pr-12">
             <section>
               <SectionTitle index="01" title={t('dataset_insights')} />
               <div className="grid grid-cols-2 gap-8 mt-8">
@@ -321,62 +327,62 @@ export default function App() {
             </section>
           </div>
 
-          <div className="lg:col-span-8 flex flex-col gap-10">
+          <div className="xl:col-span-6 flex flex-col gap-10">
             <section>
               <SectionTitle index="03" title={t('model_inputs')} />
-              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-8">
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
                 {/* 1. Page Value & Promos */}
-                <div className="space-y-6 col-span-full md:col-span-1 border-b md:border-b-0 md:border-r border-zinc-100 pb-6 md:pb-0 md:pr-6">
-                  <h3 className="text-[10px] uppercase font-black tracking-widest text-black mb-4">Value & Conversion</h3>
-                  <InputGroup label="Propensity Score" value={inputs.PageValues} onChange={(v) => updateInput('PageValues', parseFloat(v))} icon={<TrendingUp className="w-3 h-3" />} />
-                  <InputGroup label="Promo Weight" value={inputs.SpecialDay} onChange={(v) => updateInput('SpecialDay', parseFloat(v))} icon={<TrendingUp className="w-3 h-3" />} placeholder="0.0 - 1.0" />
+                <div className="space-y-6 col-span-full md:col-span-1 border-b md:border-b-0 lg:border-r border-zinc-100 pb-6 md:pb-0 lg:pr-6">
+                  <h3 className="text-[10px] uppercase font-black tracking-widest text-black mb-4">Value & Target</h3>
+                  <InputGroup label="Page Values" value={inputs.PageValues} onChange={(v) => updateInput('PageValues', parseFloat(v))} icon={<TrendingUp className="w-3 h-3" />} />
+                  <InputGroup label="Special Day" value={inputs.SpecialDay} onChange={(v) => updateInput('SpecialDay', parseFloat(v))} icon={<TrendingUp className="w-3 h-3" />} placeholder="0.0 - 1.0" />
                   
                   <div className="space-y-3 pb-3 group pt-2">
-                    <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-zinc-300 flex items-center gap-2 group-hover:text-zinc-500 transition-colors">
-                      <Calendar className="w-3 h-3" />
-                      Timeline (Month)
+                    <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-zinc-300 flex items-center gap-2 group-hover:text-zinc-500 transition-colors truncate">
+                      <Calendar className="w-3 h-3 shrink-0" />
+                      Month
                     </label>
                     <select value={inputs.Month} onChange={(e) => updateInput('Month', e.target.value)} className="bg-transparent font-mono text-xl w-full border-none outline-none cursor-pointer appearance-none p-0 m-0 leading-none font-bold uppercase tracking-tighter">
                       {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => (
-                        <option key={month} value={month}>{month.toUpperCase()} WINDOW</option>
+                         <option key={month} value={month}>{month.toUpperCase()} WINDOW</option>
                       ))}
                     </select>
                   </div>
                 </div>
 
                 {/* 2. Page Activity */}
-                <div className="space-y-6 col-span-full md:col-span-1 border-b md:border-b-0 md:border-r border-zinc-100 pb-6 md:pb-0 md:pr-6 md:pl-2">
+                <div className="space-y-6 col-span-full md:col-span-1 border-b md:border-b-0 lg:border-r border-zinc-100 pb-6 md:pb-0 lg:pr-6 lg:pl-2">
                   <h3 className="text-[10px] uppercase font-black tracking-widest text-black mb-4">Session Activity</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label="Prod Vol" value={inputs.ProductRelated} onChange={(v) => updateInput('ProductRelated', parseInt(v))} icon={<ShoppingBag className="w-3 h-3" />} />
-                    <InputGroup label="Prod Dur" value={inputs.ProductRelated_Duration} onChange={(v) => updateInput('ProductRelated_Duration', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                    <InputGroup label="Product Rel" value={inputs.ProductRelated} onChange={(v) => updateInput('ProductRelated', parseInt(v))} icon={<ShoppingBag className="w-3 h-3 shrink-0" />} />
+                    <InputGroup label="Prod Dur" value={inputs.ProductRelated_Duration} onChange={(v) => updateInput('ProductRelated_Duration', parseFloat(v))} icon={<Clock className="w-3 h-3 shrink-0" />} />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label="Admin Vol" value={inputs.Administrative} onChange={(v) => updateInput('Administrative', parseInt(v))} icon={<Layout className="w-3 h-3" />} />
-                    <InputGroup label="Admin Dur" value={inputs.Administrative_Duration} onChange={(v) => updateInput('Administrative_Duration', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                    <InputGroup label="Admin" value={inputs.Administrative} onChange={(v) => updateInput('Administrative', parseInt(v))} icon={<Layout className="w-3 h-3 shrink-0" />} />
+                    <InputGroup label="Admin Dur" value={inputs.Administrative_Duration} onChange={(v) => updateInput('Administrative_Duration', parseFloat(v))} icon={<Clock className="w-3 h-3 shrink-0" />} />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label="Info Vol" value={inputs.Informational} onChange={(v) => updateInput('Informational', parseInt(v))} icon={<Layout className="w-3 h-3" />} />
-                    <InputGroup label="Info Dur" value={inputs.Informational_Duration} onChange={(v) => updateInput('Informational_Duration', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                    <InputGroup label="Info" value={inputs.Informational} onChange={(v) => updateInput('Informational', parseInt(v))} icon={<Layout className="w-3 h-3 shrink-0" />} />
+                    <InputGroup label="Info Dur" value={inputs.Informational_Duration} onChange={(v) => updateInput('Informational_Duration', parseFloat(v))} icon={<Clock className="w-3 h-3 shrink-0" />} />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label="Exit Rate" value={inputs.ExitRates} onChange={(v) => updateInput('ExitRates', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
-                    <InputGroup label="Bounce" value={inputs.BounceRates} onChange={(v) => updateInput('BounceRates', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                    <InputGroup label="Exit Rates" value={inputs.ExitRates} onChange={(v) => updateInput('ExitRates', parseFloat(v))} icon={<TrendingUp className="w-3 h-3 text-red-500 shrink-0" />} />
+                    <InputGroup label="Bounce Rates" value={inputs.BounceRates} onChange={(v) => updateInput('BounceRates', parseFloat(v))} icon={<TrendingUp className="w-3 h-3 text-red-500 shrink-0" />} />
                   </div>
                 </div>
 
                 {/* 3. Tech & Demographics */}
-                <div className="space-y-6 col-span-full md:col-span-1 md:pl-2">
+                <div className="space-y-6 col-span-full md:col-span-2 lg:col-span-1 lg:pl-2">
                   <h3 className="text-[10px] uppercase font-black tracking-widest text-black mb-4">User Details</h3>
                   
                   <div className="space-y-3 pb-3 group">
-                    <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-400 flex items-center gap-2">
-                      <Users className="w-3 h-3" />
-                      {language === 'zh' ? '访客类型' : 'Audience'}
+                    <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-400 flex items-center gap-2 truncate">
+                      <Users className="w-3 h-3 shrink-0" />
+                      {language === 'zh' ? '访客类型' : 'Visitor Type'}
                     </label>
-                    <div className="flex gap-4">
+                    <div className="flex gap-3">
                       {['Returning_Visitor', 'New_Visitor', 'Other'].map(type => (
-                        <button key={type} onClick={() => updateInput('VisitorType', type)} className={cn("text-[9px] font-bold uppercase transition-all duration-300 relative pb-1", inputs.VisitorType === type ? "text-black border-b border-black" : "text-gray-400 hover:text-black border-b border-transparent")}>
+                        <button key={type} onClick={() => updateInput('VisitorType', type)} className={cn("text-[8px] sm:text-[9px] font-bold uppercase transition-all duration-300 relative pb-1", inputs.VisitorType === type ? "text-black border-b border-black" : "text-gray-400 hover:text-black border-b border-transparent")}>
                           {type === 'Returning_Visitor' ? 'Return' : type === 'New_Visitor' ? 'New' : 'Other'}
                         </button>
                       ))}
@@ -390,18 +396,18 @@ export default function App() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <SelectGroup label="Region" value={inputs.Region} onChange={(v) => updateInput('Region', parseInt(v))} options={[1,2,3,4,5,6,7,8,9]} />
-                    <SelectGroup label="Traffic" value={inputs.TrafficType} onChange={(v) => updateInput('TrafficType', parseInt(v))} options={[1,2,3,4,5,6,7,8,9,10,11,13,14,20]} />
+                    <SelectGroup label="Traffic Type" value={inputs.TrafficType} onChange={(v) => updateInput('TrafficType', parseInt(v))} options={[1,2,3,4,5,6,7,8,9,10,11,13,14,20]} />
                   </div>
 
                   <div className="space-y-4 pt-2">
-                    <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-400 flex items-center gap-2">
-                      <Clock className="w-3 h-3" />
-                      {language === 'zh' ? '周末' : 'Day Type'}
+                    <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-400 flex items-center gap-2 truncate">
+                      <Clock className="w-3 h-3 shrink-0" />
+                      {language === 'zh' ? '周末' : 'Weekend'}
                     </label>
                     <div className="flex gap-4">
                       {['TRUE', 'FALSE'].map(val => (
                         <button key={val} onClick={() => updateInput('Weekend', val)} className={cn("text-[9px] font-bold uppercase transition-all duration-300 relative pb-1", inputs.Weekend === val ? "text-black border-b border-black" : "text-gray-400 hover:text-black border-b border-transparent")}>
-                          {val === 'TRUE' ? 'Weekend' : 'Work'}
+                          {val === 'TRUE' ? 'Yes' : 'No'}
                         </button>
                       ))}
                     </div>
@@ -463,7 +469,7 @@ export default function App() {
             </AnimatePresence>
           </div>
 
-          <div className="lg:col-span-4 flex flex-col border-t lg:border-t-0 lg:border-l border-gray-100 pt-12 lg:pt-0 lg:pl-12">
+          <div className="xl:col-span-3 flex flex-col border-t xl:border-t-0 xl:border-l border-gray-100 pt-12 xl:pt-0 xl:pl-12">
             <div className="flex-1 flex flex-col items-center">
               <div className="text-center w-full space-y-12">
                 <div className="flex flex-col items-center gap-6">
@@ -471,20 +477,23 @@ export default function App() {
                   <div className="w-48 h-40 flex items-center justify-center relative">
                      <div className={cn(
                        "absolute inset-0 rounded-sm border-2 border-zinc-100 transition-colors duration-1000",
-                       prediction?.result ? "bg-green-50 border-green-200" : (prediction ? "bg-red-50 border-red-200" : "bg-gray-50")
+                       prediction ? (prediction.probability >= 0.6 ? "bg-green-50 border-green-200" : (prediction.probability >= 0.3 ? "bg-yellow-50 border-yellow-200" : "bg-red-50 border-red-200")) : "bg-gray-50"
                      )} />
                      {prediction ? (
                        <motion.div 
-                         key={prediction.result ? 'yes' : 'no'}
+                         key={prediction.probability}
                          initial={{ opacity: 0, y: 10 }}
                          animate={{ opacity: 1, y: 0 }}
-                         className="flex flex-col items-center z-10"
+                         className="flex flex-col items-center z-10 w-full px-4"
                        >
-                         <span className="font-serif text-7xl font-black tracking-tighter">
-                           {prediction.result ? 'YES' : 'NO'}
+                         <span className={cn(
+                           "font-serif font-black tracking-tighter text-center leading-[1.1]",
+                           prediction.probability >= 0.6 ? "text-2xl" : "text-4xl"
+                         )}>
+                           {prediction.probability >= 0.6 ? 'yes！' : (prediction.probability >= 0.3 ? 'possible？' : 'no×')}
                          </span>
-                         <span className="text-[10px] font-bold tracking-[0.4em] uppercase mt-2 opacity-40 italic">
-                           Pred: {prediction.result ? '1' : '0'}
+                         <span className="text-[10px] font-bold tracking-[0.4em] uppercase mt-4 opacity-40 italic">
+                           Pred: {prediction.probability >= 0.6 ? '1' : '0'}
                          </span>
                        </motion.div>
                      ) : (
@@ -517,7 +526,8 @@ export default function App() {
         </main>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 function SectionTitle({ index, title }: { index: string; title: string }) {
