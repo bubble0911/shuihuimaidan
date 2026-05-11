@@ -321,116 +321,92 @@ export default function App() {
             </section>
           </div>
 
-          <div className="lg:col-span-5 flex flex-col gap-10">
+          <div className="lg:col-span-8 flex flex-col gap-10">
             <section>
               <SectionTitle index="03" title={t('model_inputs')} />
-              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
-                <InputGroup 
-                  label="Propensity Score" 
-                  value={inputs.PageValues} 
-                  onChange={(v) => updateInput('PageValues', parseFloat(v))}
-                  icon={<TrendingUp className="w-3 h-3" />}
-                />
-                <InputGroup 
-                  label="Exit Rate" 
-                  value={inputs.ExitRates} 
-                  onChange={(v) => updateInput('ExitRates', parseFloat(v))}
-                  icon={<Clock className="w-3 h-3" />}
-                />
-                
-                <div className="space-y-3 pb-3 group">
-                  <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-zinc-300 flex items-center gap-2 group-hover:text-zinc-500 transition-colors">
-                    <Layout className="w-3 h-3" />
-                    Traffic Source
-                  </label>
-                  <select 
-                    value={inputs.TrafficType}
-                    onChange={(e) => updateInput('TrafficType', parseInt(e.target.value))}
-                    className="bg-transparent font-mono text-xl w-full border-none outline-none cursor-pointer appearance-none p-0 m-0 leading-none font-bold uppercase tracking-tighter"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 20].map(type => (
-                      <option key={type} value={type}>Source Channel {type}</option>
-                    ))}
-                  </select>
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-8">
+                {/* 1. Page Value & Promos */}
+                <div className="space-y-6 col-span-full md:col-span-1 border-b md:border-b-0 md:border-r border-zinc-100 pb-6 md:pb-0 md:pr-6">
+                  <h3 className="text-[10px] uppercase font-black tracking-widest text-black mb-4">Value & Conversion</h3>
+                  <InputGroup label="Propensity Score" value={inputs.PageValues} onChange={(v) => updateInput('PageValues', parseFloat(v))} icon={<TrendingUp className="w-3 h-3" />} />
+                  <InputGroup label="Promo Weight" value={inputs.SpecialDay} onChange={(v) => updateInput('SpecialDay', parseFloat(v))} icon={<TrendingUp className="w-3 h-3" />} placeholder="0.0 - 1.0" />
+                  
+                  <div className="space-y-3 pb-3 group pt-2">
+                    <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-zinc-300 flex items-center gap-2 group-hover:text-zinc-500 transition-colors">
+                      <Calendar className="w-3 h-3" />
+                      Timeline (Month)
+                    </label>
+                    <select value={inputs.Month} onChange={(e) => updateInput('Month', e.target.value)} className="bg-transparent font-mono text-xl w-full border-none outline-none cursor-pointer appearance-none p-0 m-0 leading-none font-bold uppercase tracking-tighter">
+                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => (
+                        <option key={month} value={month}>{month.toUpperCase()} WINDOW</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="space-y-3 pb-3 group">
-                  <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-zinc-300 flex items-center gap-2 group-hover:text-zinc-500 transition-colors">
-                    <Calendar className="w-3 h-3" />
-                    Timeline
-                  </label>
-                  <select 
-                    value={inputs.Month}
-                    onChange={(e) => updateInput('Month', e.target.value)}
-                    className="bg-transparent font-mono text-xl w-full border-none outline-none cursor-pointer appearance-none p-0 m-0 leading-none font-bold uppercase tracking-tighter"
-                  >
-                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => (
-                      <option key={month} value={month}>{month.toUpperCase()} WINDOW</option>
-                    ))}
-                  </select>
+                {/* 2. Page Activity */}
+                <div className="space-y-6 col-span-full md:col-span-1 border-b md:border-b-0 md:border-r border-zinc-100 pb-6 md:pb-0 md:pr-6 md:pl-2">
+                  <h3 className="text-[10px] uppercase font-black tracking-widest text-black mb-4">Session Activity</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <InputGroup label="Prod Vol" value={inputs.ProductRelated} onChange={(v) => updateInput('ProductRelated', parseInt(v))} icon={<ShoppingBag className="w-3 h-3" />} />
+                    <InputGroup label="Prod Dur" value={inputs.ProductRelated_Duration} onChange={(v) => updateInput('ProductRelated_Duration', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <InputGroup label="Admin Vol" value={inputs.Administrative} onChange={(v) => updateInput('Administrative', parseInt(v))} icon={<Layout className="w-3 h-3" />} />
+                    <InputGroup label="Admin Dur" value={inputs.Administrative_Duration} onChange={(v) => updateInput('Administrative_Duration', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <InputGroup label="Info Vol" value={inputs.Informational} onChange={(v) => updateInput('Informational', parseInt(v))} icon={<Layout className="w-3 h-3" />} />
+                    <InputGroup label="Info Dur" value={inputs.Informational_Duration} onChange={(v) => updateInput('Informational_Duration', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <InputGroup label="Exit Rate" value={inputs.ExitRates} onChange={(v) => updateInput('ExitRates', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
+                    <InputGroup label="Bounce" value={inputs.BounceRates} onChange={(v) => updateInput('BounceRates', parseFloat(v))} icon={<Clock className="w-3 h-3" />} />
+                  </div>
                 </div>
 
-                <InputGroup 
-                  label="Promo Weight" 
-                  value={inputs.SpecialDay} 
-                  onChange={(v) => updateInput('SpecialDay', parseFloat(v))}
-                  icon={<TrendingUp className="w-3 h-3" />}
-                  placeholder="0.0 - 1.0"
-                />
-
-                <InputGroup 
-                  label="Product Vol" 
-                  value={inputs.ProductRelated} 
-                  onChange={(v) => updateInput('ProductRelated', parseInt(v))}
-                  icon={<ShoppingBag className="w-3 h-3" />}
-                />
-                
-                <div className="sm:col-span-2 grid grid-cols-2 gap-8 pt-2">
-                  <div className="space-y-4">
+                {/* 3. Tech & Demographics */}
+                <div className="space-y-6 col-span-full md:col-span-1 md:pl-2">
+                  <h3 className="text-[10px] uppercase font-black tracking-widest text-black mb-4">User Details</h3>
+                  
+                  <div className="space-y-3 pb-3 group">
                     <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-400 flex items-center gap-2">
                       <Users className="w-3 h-3" />
                       {language === 'zh' ? '访客类型' : 'Audience'}
                     </label>
                     <div className="flex gap-4">
-                      {['Returning_Visitor', 'New_Visitor'].map(type => (
-                        <button
-                          key={type}
-                          onClick={() => updateInput('VisitorType', type)}
-                          className={cn(
-                            "text-[9px] font-bold uppercase transition-all duration-300 relative pb-1",
-                            inputs.VisitorType === type 
-                              ? "text-black border-b border-black" 
-                              : "text-gray-300 hover:text-gray-400 border-b border-transparent"
-                          )}
-                        >
-                          {type === 'Returning_Visitor' ? 'Return' : 'New'}
+                      {['Returning_Visitor', 'New_Visitor', 'Other'].map(type => (
+                        <button key={type} onClick={() => updateInput('VisitorType', type)} className={cn("text-[9px] font-bold uppercase transition-all duration-300 relative pb-1", inputs.VisitorType === type ? "text-black border-b border-black" : "text-gray-400 hover:text-black border-b border-transparent")}>
+                          {type === 'Returning_Visitor' ? 'Return' : type === 'New_Visitor' ? 'New' : 'Other'}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                   <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <SelectGroup label="OS" value={inputs.OperatingSystems} onChange={(v) => updateInput('OperatingSystems', parseInt(v))} options={[1,2,3,4,5,6,7,8]} />
+                    <SelectGroup label="Browser" value={inputs.Browser} onChange={(v) => updateInput('Browser', parseInt(v))} options={[1,2,3,4,5,6,7,8,9,10,11,12,13]} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <SelectGroup label="Region" value={inputs.Region} onChange={(v) => updateInput('Region', parseInt(v))} options={[1,2,3,4,5,6,7,8,9]} />
+                    <SelectGroup label="Traffic" value={inputs.TrafficType} onChange={(v) => updateInput('TrafficType', parseInt(v))} options={[1,2,3,4,5,6,7,8,9,10,11,13,14,20]} />
+                  </div>
+
+                  <div className="space-y-4 pt-2">
                     <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-400 flex items-center gap-2">
                       <Clock className="w-3 h-3" />
                       {language === 'zh' ? '周末' : 'Day Type'}
                     </label>
                     <div className="flex gap-4">
                       {['TRUE', 'FALSE'].map(val => (
-                        <button
-                          key={val}
-                          onClick={() => updateInput('Weekend', val)}
-                          className={cn(
-                            "text-[9px] font-bold uppercase transition-all duration-300 relative pb-1",
-                            inputs.Weekend === val 
-                              ? "text-black border-b border-black" 
-                              : "text-gray-300 hover:text-gray-400 border-b border-transparent"
-                          )}
-                        >
+                        <button key={val} onClick={() => updateInput('Weekend', val)} className={cn("text-[9px] font-bold uppercase transition-all duration-300 relative pb-1", inputs.Weekend === val ? "text-black border-b border-black" : "text-gray-400 hover:text-black border-b border-transparent")}>
                           {val === 'TRUE' ? 'Weekend' : 'Work'}
                         </button>
                       ))}
                     </div>
                   </div>
+
                 </div>
               </div>
 
@@ -487,7 +463,7 @@ export default function App() {
             </AnimatePresence>
           </div>
 
-          <div className="lg:col-span-3 flex flex-col border-t lg:border-t-0 lg:border-l border-gray-100 pt-12 lg:pt-0 lg:pl-12">
+          <div className="lg:col-span-4 flex flex-col border-t lg:border-t-0 lg:border-l border-gray-100 pt-12 lg:pt-0 lg:pl-12">
             <div className="flex-1 flex flex-col items-center">
               <div className="text-center w-full space-y-12">
                 <div className="flex flex-col items-center gap-6">
@@ -589,6 +565,25 @@ function InputGroup({ label, value, onChange, icon, placeholder }: { label: stri
         onChange={(e) => onChange(e.target.value)}
         className="bg-transparent font-mono text-2xl w-full outline-none focus:text-zinc-500 transition-colors tracking-tighter p-0 m-0 leading-none"
       />
+    </div>
+  );
+}
+
+function SelectGroup({ label, value, onChange, options }: { label: string; value: number; onChange: (v: string) => void; options: number[] }) {
+  return (
+    <div className="space-y-3 border-b border-zinc-100 pb-3 hover:border-black transition-all duration-300 group overflow-hidden">
+      <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-zinc-300 flex items-center gap-2 group-hover:text-zinc-500 transition-colors truncate">
+        {label}
+      </label>
+      <select 
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-transparent font-mono text-xl w-full border-none outline-none cursor-pointer appearance-none p-0 m-0 leading-none font-bold uppercase tracking-tighter"
+      >
+        {options.map(opt => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
     </div>
   );
 }
