@@ -118,9 +118,24 @@ export default function App() {
           const score = predictor.train(csvData);
           setAccuracy(score);
 
-          // Load big data stats
-          const statsJson = predictor.get_stats();
-          setBigDataStats(JSON.parse(statsJson));
+          // Load big data stats with local history accumulation
+          let statsJson = predictor.get_stats();
+          let currentStats = JSON.parse(statsJson);
+
+          const localHistoryStr = localStorage.getItem('bigDataLocalHistory');
+          if (localHistoryStr) {
+             try {
+                const localHistory = JSON.parse(localHistoryStr);
+                if (localHistory && Array.isArray(localHistory) && localHistory.length > 0) {
+                   const batchJson = JSON.stringify(localHistory);
+                   statsJson = predictor.update_stats_batch(batchJson);
+                   currentStats = JSON.parse(statsJson);
+                }
+             } catch (e) {
+                console.warn("Failed to load local history:", e);
+             }
+          }
+          setBigDataStats(currentStats);
 
           setPyodide(py);
           setIsReady(true);
@@ -204,6 +219,26 @@ export default function App() {
       const willPay = jsResult[0];
       const prob = jsResult[1];
       
+      // Update global big data stats with this prediction outcome
+      try {
+        const statsStr = predictorObj.update_stats(pyInputs, willPay);
+        if (typeof statsStr === 'string' && statsStr.startsWith('{')) {
+           const updatedStats = JSON.parse(statsStr);
+           setBigDataStats(updatedStats);
+        }
+        // Save to LocalStorage
+        const localHistoryStr = localStorage.getItem('bigDataLocalHistory');
+        let localHistory = [];
+        if (localHistoryStr) {
+           localHistory = JSON.parse(localHistoryStr);
+        }
+        const record = { ...inputs, Revenue: Boolean(willPay) };
+        localHistory.push(record);
+        localStorage.setItem('bigDataLocalHistory', JSON.stringify(localHistory));
+      } catch (err) {
+        console.warn("Failed to update big data stats:", err);
+      }
+      
       setPrediction({ 
         result: Boolean(willPay), 
         probability: parseFloat(String(prob)) 
@@ -248,7 +283,9 @@ export default function App() {
   }
 
   return (
-    <div className="bg-[#F5F2ED] text-[#1A1A1A] min-h-screen flex flex-col font-sans selection:bg-black selection:text-white">
+    <div className="bg-[#F5F2ED] text-[#1A1A1A] min-h-screen flex flex-col font-sans selection:bg-black selection:text-white relative">
+      {prediction && prediction.probability >= 0.6 && <FlyingDollars />}
+      {prediction && prediction.probability >= 0.3 && prediction.probability < 0.6 && <BigQuestionMark />}
       <Navigation onDashboardOpen={() => setIsDashboardOpen(true)} />
       
       <AnimatePresence>
@@ -293,7 +330,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-8 mt-8">
                 <div className="flex flex-col">
                   <span className="text-4xl font-serif font-bold tracking-tighter decoration-black underline decoration-4 underline-offset-4">{bigDataStats?.total_samples.toLocaleString() || '12,330'}</span>
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-gray-400 mt-2">Historical Samples</span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-gray-400 mt-2">Historical Predicts</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-4xl font-serif font-bold tracking-tighter decoration-black underline decoration-4 underline-offset-4">18</span>
@@ -506,7 +543,6 @@ export default function App() {
                 </div>
 
                 <div className="pt-8 space-y-5 w-full text-left">
-                  <ResultRow icon={<Layout className="w-3 h-3 text-zinc-300" />} label={t('source')} value="DIRECT" />
                   <ResultRow icon={<Calendar className="w-3 h-3 text-zinc-300" />} label={t('window')} value={inputs.Weekend === 'TRUE' ? t('weekend') : t('weekday')} />
                   <ResultRow icon={<Clock className="w-3 h-3 text-zinc-300" />} label={t('timescale')} value={inputs.Month.toUpperCase()} />
                 </div>
@@ -562,10 +598,10 @@ function InfluenceBar({ label, percent }: { label: string; percent: number }) {
 
 function InputGroup({ label, value, onChange, icon, placeholder }: { label: string; value: any; onChange: (v: string) => void; icon: React.ReactNode; placeholder?: string }) {
   return (
-    <div className="space-y-3 border-b border-zinc-100 pb-3 hover:border-black transition-all duration-300 group overflow-hidden">
-      <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-zinc-300 flex items-center gap-2 group-hover:text-zinc-500 transition-colors truncate">
-        {icon}
-        {label}
+    <div className="space-y-3 border-b border-zinc-100 pb-3 hover:border-black transition-all duration-300 group">
+      <label className="text-[10px] uppercase font-bold tracking-widest text-zinc-300 flex items-start gap-2 group-hover:text-zinc-500 transition-colors pointer-events-none">
+        <span className="shrink-0 mt-0.5">{icon}</span>
+        <span className="leading-tight break-words">{label}</span>
       </label>
       <input 
         type="number" 
@@ -608,6 +644,82 @@ function ResultRow({ icon, label, value }: { icon: React.ReactNode; label: strin
       <span className="text-[10px] font-mono bg-zinc-50 text-zinc-700 px-2 py-0.5 rounded-sm font-bold tracking-tight">
         {value}
       </span>
+    </div>
+  );
+}
+
+function FlyingDollars() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+      {[...Array(40)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute font-black text-green-500/80 drop-shadow-lg"
+          initial={{
+            y: "110vh",
+            x: `${Math.random() * 100}vw`,
+            opacity: 0,
+            scale: 0.5 + Math.random() * 1.5,
+            rotate: 0,
+          }}
+          animate={{
+            y: "-20vh",
+            x: `${Math.random() * 100}vw`,
+            opacity: [0, 1, 1, 0],
+            rotate: Math.random() > 0.5 ? 360 : -360,
+          }}
+          transition={{
+            duration: 3 + Math.random() * 4,
+            repeat: Infinity,
+            ease: "linear",
+            delay: Math.random() * 2,
+          }}
+          style={{
+            fontSize: `${24 + Math.random() * 40}px`
+          }}
+        >
+          $
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function BigQuestionMark() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden mix-blend-multiply">
+        <motion.div
+          className="relative font-black text-yellow-500/30 select-none drop-shadow-2xl"
+          initial={{
+            scale: 0.5,
+            opacity: 0,
+            y: 50
+          }}
+          animate={{
+            scale: [1, 1.05, 1],
+            opacity: [0, 0.4, 0.2],
+            y: [0, -20, 0]
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          style={{
+            fontSize: '400px',
+            lineHeight: 1
+          }}
+        >
+          ?
+        </motion.div>
     </div>
   );
 }

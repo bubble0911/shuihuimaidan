@@ -69,6 +69,9 @@ export default function Dashboard({ onClose }: { onClose: () => void }) {
   const stats = {
     total: history.length,
     positive: history.filter(h => h.prediction).length,
+    high: history.filter(h => h.probability >= 0.6).length,
+    medium: history.filter(h => h.probability >= 0.3 && h.probability < 0.6).length,
+    low: history.filter(h => h.probability < 0.3).length,
     avgConfidence: history.length > 0 
       ? history.reduce((acc, curr) => acc + curr.probability, 0) / history.length 
       : 0
@@ -80,8 +83,9 @@ export default function Dashboard({ onClose }: { onClose: () => void }) {
   }));
 
   const pieData = [
-    { name: t('potential_revenue'), value: stats.positive, color: '#141414' },
-    { name: t('inert_session'), value: stats.total - stats.positive, color: '#E4E3E0' }
+    { name: 'HIGH PROB', value: stats.high, color: '#141414' },
+    { name: 'MEDIUM PROB', value: stats.medium, color: '#A3A3A3' },
+    { name: 'LOW PROB', value: stats.low, color: '#E4E3E0' }
   ];
 
   return (
